@@ -49,6 +49,22 @@ def set_led():
         print("Error updating LED state:", str(e))
         return jsonify({"error": "Internal Server Error", "details": str(e)}), 500
 
+@app.route('/get-data', methods=['GET'])
+def get_data():
+    try:
+        latest_data = list(collection.find().sort("_id", -1).limit(10))
+        if not latest_data:
+            return jsonify({"message": "No data found"}), 404  # Handle empty database case
+
+        for data in latest_data:
+            data["_id"] = str(data["_id"])  # Convert ObjectId to string
+
+        return jsonify(latest_data), 200
+    except Exception as e:
+        print("Error retrieving data:", str(e))  # Log error in server
+        return jsonify({"error": "Internal Server Error", "details": str(e)}), 500
+
+
 
 @app.route("/get-led", methods=["GET"])
 def get_led():
