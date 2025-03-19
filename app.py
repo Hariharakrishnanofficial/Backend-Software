@@ -52,7 +52,7 @@ def set_led():
 @app.route('/get-data', methods=['GET'])
 def get_data():
     try:
-        latest_data = list(collection.find().sort("_id", -1).limit(10))
+        latest_data = list(sensor_collection.find().sort("_id", -1).limit(10))
         if not latest_data:
             return jsonify({"message": "No data found"}), 404  # Handle empty database case
 
