@@ -207,22 +207,6 @@ def get_data():
         print("Error retrieving data:", str(e))  # Log error in server
         return jsonify({"error": "Internal Server Error", "details": str(e)}), 500
 
-@app.route('/get-data', methods=['GET'])
-def get_data():
-    try:
-        latest_data = list(sensor_collection.find().sort("_id", -1).limit(10))
-        if not latest_data:
-            return jsonify({"message": "No data found"}), 404  # Handle empty database case
-
-        for data in latest_data:
-            data["_id"] = str(data["_id"])  # Convert ObjectId to string
-
-        return jsonify(latest_data), 200
-    except Exception as e:
-        print("Error retrieving data:", str(e))  # Log error in server
-        return jsonify({"error": "Internal Server Error", "details": str(e)}), 500
-
-
 
 def scheduled_task(action, revert_delay):
     control_collection.update_one({}, {"$set": {"pump": action}}, upsert=True)
@@ -292,13 +276,9 @@ def schedule_task():
     return jsonify({"message": "Task scheduled successfully"}), 200
 
 if __name__ == "__main__":
-<<<<<<< HEAD:app.py
-    app.run(host="0.0.0.0", port=5000, debug=True)
-=======
     app.run(host="0.0.0.0", port=5000, debug=True) 
     # app.logger.disabled = False
     log = logging.getLogger('werkzeug')
     log.disabled = True
     # scheduler = BackgroundScheduler(timezone=pytz.utc)
     # scheduler.start()
->>>>>>> 0f4b483 (commit):Backend.py
