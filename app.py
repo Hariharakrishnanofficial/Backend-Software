@@ -28,7 +28,7 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY')
 scheduler = BackgroundScheduler(timezone=pytz.utc)
 scheduler.start()
 uri = "mongodb+srv://hariharakrishnanofficial:t44W3v9vbWEDrxab@cluster0.9gzgp.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
-
+IST = pytz.timezone("Asia/Kolkata")
 
 
 client = MongoClient(uri,tlsCAFile=certifi.where())
@@ -226,59 +226,114 @@ def revert_action(action):
     control_collection.update_one({}, {"$set": {"pump": action}}, upsert=True)
     print(f"Reverted action at {datetime.now()} to: {action}")
 
-
 @app.route('/schedule-task', methods=['POST'])
 def schedule_task():
     data = request.json
     schedule_type = data.get('schedule_type')
-    action = data.get('action').upper()
-    delay = data.get('delay', 0)  
-    revert_delay = data.get('revert_delay', 0)  
+    action = data.get('action', '').upper()
+    delay = int(data.get('delay', 0))  
+    revert_delay = int(data.get('revert_delay', 0))  
 
-    if not all([schedule_type, action]):
+    if not schedule_type or not action:
         return jsonify({"error": "Missing required fields"}), 400
 
     job_id = 'scheduled-task'
     existing_job = scheduler.get_job(job_id)
     if existing_job:
-        scheduler.remove_job(job_id)
+        scheduler.remove_job(job_id)  # Remove any existing job before rescheduling
+
+    now_ist = datetime.now(IST) + timedelta(minutes=delay)  # Current time with delay
 
     if schedule_type == 'daily':
-        time = data.get('time')
-        if not time:
+        time_str = data.get('time')
+        if not time_str:
             return jsonify({"error": "Time is required for daily schedule"}), 400
-        hour, minute = map(int, time.split(':'))
-        run_time = datetime.now(pytz.utc).replace(hour=hour, minute=minute, second=0, microsecond=0) + timedelta(minutes=delay)
-        trigger = CronTrigger(hour=run_time.hour, minute=run_time.minute, timezone=pytz.utc)
+        hour, minute = map(int, time_str.split(':'))
+        trigger = CronTrigger(hour=hour, minute=minute, timezone=IST)
 
     elif schedule_type == 'hourly':
-        trigger = IntervalTrigger(hours=1, start_date=datetime.now(pytz.utc) + timedelta(minutes=delay))
+        trigger = IntervalTrigger(hours=1, start_date=now_ist)
 
     elif schedule_type == 'specific':
         datetime_str = data.get('datetime')
         if not datetime_str:
             return jsonify({"error": "Datetime is required for specific schedule"}), 400
-        run_date = datetime.strptime(datetime_str, '%Y-%m-%dT%H:%M')
-        run_date = pytz.utc.localize(run_date) + timedelta(minutes=delay)
+        run_date = IST.localize(datetime.strptime(datetime_str, '%Y-%m-%dT%H:%M')) + timedelta(minutes=delay)
         trigger = DateTrigger(run_date=run_date)
 
     elif schedule_type == 'minute':
-        interval = data.get('interval')
-        if not interval:
-            return jsonify({"error": "Interval is required for minute schedule"}), 400
-        trigger = IntervalTrigger(minutes=int(interval), start_date=datetime.now(pytz.utc) + timedelta(minutes=delay))
+        interval = int(data.get('interval', 0))
+        if interval <= 0:
+            return jsonify({"error": "Interval must be greater than 0 for minute schedule"}), 400
+        trigger = IntervalTrigger(minutes=interval, start_date=now_ist)
 
     else:
         return jsonify({"error": "Invalid schedule type"}), 400
 
-    scheduler.add_job(scheduled_task, trigger, id=job_id, args=[action, revert_delay])
+    # Add Job with dynamic updates
+    scheduler.add_job(
+        scheduled_task, 
+        trigger, 
+        id=job_id, 
+        args=[action, revert_delay], 
+        replace_existing=True,  # Ensures new job replaces old one dynamically
+        misfire_grace_time=60  # Prevents missed executions due to small delays
+    )
 
     return jsonify({"message": "Task scheduled successfully"}), 200
+
+# @app.route('/schedule-task', methods=['POST'])
+# def schedule_task():
+#     data = request.json
+#     schedule_type = data.get('schedule_type')
+#     action = data.get('action').upper()
+#     delay = data.get('delay', 0)  
+#     revert_delay = data.get('revert_delay', 0)  
+#     print("schedule-task data:" ,data)
+#     if not all([schedule_type, action]):
+#         return jsonify({"error": "Missing required fields"}), 400
+
+#     job_id = 'scheduled-task'
+#     existing_job = scheduler.get_job(job_id)
+#     if existing_job:
+#         scheduler.remove_job(job_id)
+
+#     if schedule_type == 'daily':
+#         time = data.get('time')
+#         if not time:
+#             return jsonify({"error": "Time is required for daily schedule"}), 400
+#         hour, minute = map(int, time.split(':'))
+#         run_time = datetime.now(pytz.utc).replace(hour=hour, minute=minute, second=0, microsecond=0) + timedelta(minutes=delay)
+#         trigger = CronTrigger(hour=run_time.hour, minute=run_time.minute, timezone=pytz.utc)
+
+#     elif schedule_type == 'hourly':
+#         trigger = IntervalTrigger(hours=1, start_date=datetime.now(pytz.utc) + timedelta(minutes=delay))
+
+#     elif schedule_type == 'specific':
+#         datetime_str = data.get('datetime')
+#         if not datetime_str:
+#             return jsonify({"error": "Datetime is required for specific schedule"}), 400
+#         run_date = datetime.strptime(datetime_str, '%Y-%m-%dT%H:%M')
+#         run_date = pytz.utc.localize(run_date) + timedelta(minutes=delay)
+#         trigger = DateTrigger(run_date=run_date)
+
+#     elif schedule_type == 'minute':
+#         interval = data.get('interval')
+#         if not interval:
+#             return jsonify({"error": "Interval is required for minute schedule"}), 400
+#         trigger = IntervalTrigger(minutes=int(interval), start_date=datetime.now(pytz.utc) + timedelta(minutes=delay))
+
+#     else:
+#         return jsonify({"error": "Invalid schedule type"}), 400
+
+#     scheduler.add_job(scheduled_task, trigger, id=job_id, args=[action, revert_delay])
+
+#     return jsonify({"message": "Task scheduled successfully"}), 200
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True) 
     # app.logger.disabled = False
-    log = logging.getLogger('werkzeug')
-    log.disabled = True
+    # log = logging.getLogger('werkzeug')
+    # log.disabled = True
     # scheduler = BackgroundScheduler(timezone=pytz.utc)
     # scheduler.start()
