@@ -66,6 +66,9 @@ def send_email(recipient_email, subject, message):
         print(f"Failed to send email: {str(e)}")
 
 
+@app.route('/')
+def index():
+    return 'Web App with Python Flask!'
 
 
 @app.route('/signup', methods=['POST'])
@@ -139,7 +142,7 @@ def get_sensor_data():
             return jsonify({"error": "No sensor data available"}), 404
 
         for data in latest_data:
-            data["_id"] = str(data["_id"])   
+            data["_id"] = str(data["_id"])  # Convert ObjectId to string for JSON serialization
 
         return jsonify(latest_data), 200
     except Exception as e:
@@ -163,7 +166,6 @@ def insert_data():
     except Exception as e:
         print("Error inserting data:", str(e))
         return jsonify({"error": "Internal Server Error", "details": str(e)}), 500
-
 
 @app.route("/set-pump", methods=["POST"])
 def set_pump():
@@ -226,7 +228,6 @@ def revert_action(action):
         send_email(user['email'], "Scheduled Task ", f"Hello! Schedule has been turn :{action}")
     control_collection.update_one({}, {"$set": {"pump": action}}, upsert=True)
     print(f"Reverted action at {datetime.now()} to: {action}")
-
 
 @app.route('/schedule-task', methods=['POST'])
 def schedule_task():
@@ -332,9 +333,20 @@ def schedule_task():
 #     return jsonify({"message": "Task scheduled successfully"}), 200
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True, threaded=True) 
-    app.logger.disabled = False
-    log = logging.getLogger('werkzeug')
-    log.disabled = False
+    listen_port = os.getenv('X_ZOHO_CATALYST_LISTEN_PORT', 9000)
+    app.run(host='0.0.0.0', port = listen_port)
+
+    # app.run(host="0.0.0.0", port=5000, debug=True, threaded=True) 
+    # app.logger.disabled = False
+    # log = logging.getLogger('werkzeug')
+    # log.disabled = True
     # scheduler = BackgroundScheduler(timezone=pytz.utc)
     # scheduler.start()
+
+
+
+
+
+
+
+
