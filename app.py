@@ -221,7 +221,7 @@ def insert_data():
         return jsonify({"error": "Internal Server Error", "details": str(e)}), 500
 
 @app.route("/insert-siva", methods=["POST"])
-def insert_data():
+def insert_datas():
     try:
         data = request.json
         siva_collection.insert_one(data)
@@ -230,7 +230,7 @@ def insert_data():
         return jsonify({"error": "Internal Server Error", "details": str(e)}), 500
 
 @app.route('/get-data-siva', methods=['GET'])
-def get_data():
+def get_datas():
     try:
         latest_data = list(siva_collection.find().sort("_id", -1).limit(1))
         if not latest_data:
