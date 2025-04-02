@@ -37,6 +37,7 @@ sensor_collection = db["sensor_datas"]
 control_collection = db["pump_control"]
 users_collection = db["users"]
 email_collection = db["emails"]
+siva_collection = db["temperature"]
 
 # 🔹 APScheduler
 scheduler = BackgroundScheduler(timezone=IST, daemon=True)
@@ -219,6 +220,30 @@ def insert_data():
     except Exception as e:
         return jsonify({"error": "Internal Server Error", "details": str(e)}), 500
 
+@app.route("/insert-siva", methods=["POST"])
+def insert_data():
+    try:
+        data = request.json
+        siva_collection.insert_one(data)
+        return jsonify({"message": "Sensor data stored successfully"}), 201
+    except Exception as e:
+        return jsonify({"error": "Internal Server Error", "details": str(e)}), 500
+
+@app.route('/get-data-siva', methods=['GET'])
+def get_data():
+    try:
+        latest_data = list(siva_collection.find().sort("_id", -1).limit(1))
+        if not latest_data:
+            return jsonify({"message": "No data found"}), 404  # Handle empty database case
+        for data in latest_data:
+            data["_id"] = str(data["_id"])  
+
+        return jsonify(latest_data), 200
+    except Exception as e:
+        print("Error retrieving data:", str(e))  # Log error in server
+        return jsonify({"error": "Internal Server Error", "details": str(e)}), 500
+
+
 
 @app.route('/get-data', methods=['GET'])
 def get_data():
@@ -274,7 +299,7 @@ def store_email():
 
 
 
-
+# internal hosting 10.51.243.13:5000
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True, threaded=True)
