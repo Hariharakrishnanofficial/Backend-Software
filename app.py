@@ -297,6 +297,40 @@ def store_email():
     return jsonify({"message": "Email stored successfully"}), 201
 
 
+@app.route('/store-api', methods=['POST'])
+def store_api():
+    data = request.json
+    api = data.get('api')
+
+    if not api:
+        return jsonify({"error": "api is required"}), 400
+
+    if localHost.find_one({'api': api}):
+        return jsonify({"error": "api already exists"}), 400
+
+    localHost.insert_one({'api': api})
+    return jsonify({"message": "api stored successfully"}), 201
+
+@app.route('/get-api', methods=['GET'])
+def get_api():
+    api = list(localHost.find({}, {"_id": 0, "api": 1}))
+    return jsonify(api), 200
+
+@app.route('/delete-api', methods=['POST'])
+def delete_api():
+    data = request.json
+    api = data.get("api")
+
+    if not api:
+        return jsonify({"error": "api is required"}), 400
+
+    result = localHost.delete_one({"api": api})
+
+    if result.deleted_count > 0:
+        return jsonify({"message": "api deleted successfully"}), 200
+    else:
+        return jsonify({"error": "api not found"}), 404
+ 
 
 
 # internal hosting 10.51.243.13:5000
