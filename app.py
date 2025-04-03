@@ -38,7 +38,7 @@ control_collection = db["pump_control"]
 users_collection = db["users"]
 email_collection = db["emails"]
 siva_collection = db["temperature"]
-
+localHost=db["api"]
 # 🔹 APScheduler
 scheduler = BackgroundScheduler(timezone=IST, daemon=True)
 
